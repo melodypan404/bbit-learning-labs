@@ -6,52 +6,59 @@ import { Article } from "@/utils/types";
 
 
 // DUMMY DATA
-import * as featureStoryJson from "../../public/test-data/test_feature.json";
+//import * as featureStoryJson from "../../public/test-data/test_feature.json";
 import FeaturedNewsCard from "@/components/FeaturedNews";
 
-let mainStory: Article = {
-    title: featureStoryJson.thread.title,
-    image_url: featureStoryJson.thread.main_image,
-    body: featureStoryJson.text.slice(0, 500) + "...",
-    author: featureStoryJson.author,                 // story author
-    url: featureStoryJson.url,                       // story url
-    publish_date: new Date(featureStoryJson.published)    // story publish date
-}
+const FEATURED_NEWS_API = "/api/news/get-featured-article";
+const NEWS_FEED_API = "/api/news/get-newsfeed";
+
+// let mainStory: Article = {
+//     title: featureStoryJson.thread.title,
+//     image_url: featureStoryJson.thread.main_image,
+//     body: featureStoryJson.text.slice(0, 500) + "...",
+//     author: featureStoryJson.author,                 // story author
+//     url: featureStoryJson.url,                       // story url
+//     publish_date: new Date(featureStoryJson.published)    // story publish date
+// }
 
 
 // fake dummy data
-let moreNews: Article[] = [
-    {
-        title: "Dummy Story 1",
-        image_url: "/globe.svg",
-        body: "This is a story.",
-        url: "bloomberg.com",
-        author: "John Doe",
-        publish_date: new Date()
-    },
-    {
-        title: "Dummy Story 2",
-        image_url: "/globe.svg",
-        body: "This is a story.",
-        url: "bloomberg.com",
-        author: "John Doe",
-        publish_date: new Date()
+// let moreNews: Article[] = [
+//     {
+//         title: "Dummy Story 1",
+//         image_url: "/globe.svg",
+//         body: "This is a story.",
+//         url: "bloomberg.com",
+//         author: "John Doe",
+//         publish_date: new Date()
+//     },
+//     {
+//         title: "Dummy Story 2",
+//         image_url: "/globe.svg",
+//         body: "This is a story.",
+//         url: "bloomberg.com",
+//         author: "John Doe",
+//         publish_date: new Date()
 
-    },
-    {
-        title: "Dummy Story 3",
-        image_url: "/globe.svg",
-        body: "This is a story.",
-        url: "bloomberg.com",
-        author: "John Doe",
-        publish_date: new Date()
-    },
-]
+//     },
+//     {
+//         title: "Dummy Story 3",
+//         image_url: "/globe.svg",
+//         body: "This is a story.",
+//         url: "bloomberg.com",
+//         author: "John Doe",
+//         publish_date: new Date()
+//     },
+// ]
 
 export default function News() {
     // Some helpful info on React states: https://react.dev/reference/react/useState
-    const [articles, setArticles] = useState<Article[]>(moreNews);
-    const [featuredArticle, setFeaturedArticle] = useState<Article>(mainStory);
+    // const [articles, setArticles] = useState<Article[]>(moreNews);
+    // const [featuredArticle, setFeaturedArticle] = useState<Article>(mainStory);
+    const [articles, setArticles] = useState<Article[]>([]);
+    const [featuredArticle, setFeaturedArticle] = useState<Article | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     // PART 4: Fetch the data from the API that the backend partner builds to
     //         populate real data to the page.
@@ -60,11 +67,40 @@ export default function News() {
             // 1. Fetch the featured article from '/api/news/get-featured-article'
             // 2. Fetch the news feed data from '/api/news/get-newsfeed'
             // 3. Use the `set` functions defined above to update the `articles` and `featuredArticle` variables
+            try {
+                const [articlesResponse, featuredArticleResponse] = await Promise.all([
+                    fetch(NEWS_FEED_API, { method: 'GET', headers: { 'Content-Type': 'application/json' } }),
+                    fetch(FEATURED_NEWS_API, { method: 'GET', headers: { 'Content-Type': 'application/json' } })
+                ]);
 
+                if (!articlesResponse.ok || !featuredArticleResponse.ok) {
+                    throw new Error(`API request failed: ${articlesResponse.statusText} | ${featuredArticleResponse.statusText}`);
+                }
+
+                const articlesData = await articlesResponse.json();
+                const featuredData = await featuredArticleResponse.json();
+
+                const parsedArticles = Array.isArray(articlesData) ? articlesData[0] : articlesData;
+                const parsedFeatured = Array.isArray(featuredData) ? featuredData[0] : featuredData;
+
+                console.log("Parsed Featured Article:", parsedFeatured);
+                console.log("Parsed Articles:", parsedArticles);
+
+                // setArticles(articlesData);
+                //setFeaturedArticle(featuredData);
+                setArticles(parsedArticles);
+                setFeaturedArticle(parsedFeatured);
+            } catch (err) {
+                setError("Error fetching news data. Please check if the API is running and returning valid JSON.");
+                console.error("Error fetching news data:", err);
+            } finally {
+                setLoading(false);
+            }
             // Once completing you should be able to see news articles different from the dummy data originally provided.
 
             // Hint: this may be useful to figure how to fetch data: https://medium.com/@bhanu.mt.1501/api-calls-in-react-js-342a09d5315f
-        }
+        };
+
         fetchData();
     }, [])
 
@@ -72,11 +108,11 @@ export default function News() {
         <div>
             <div className="grid grid-cols-4 space-x-2 space-y-2 pt-2">
                 <div className="col-span-4 lg:col-span-3">
-                    <FeaturedNewsCard article={featuredArticle} />
-                    <NewsFeed articles={articles} />
+                    {featuredArticle ? <FeaturedNewsCard article={featuredArticle} /> : <p>No Featured Article Available</p>}
+                    {articles.length > 0 ? <NewsFeed articles={articles} /> : <p>No Articles Available</p>}
 
                     {/* Once you're done with Part 4, feel free to remove the span below! */}
-                    <span className="instruction">Part 4: Connect the backend and fetch real data</span>
+                    //<span className="instruction">Part 4: Connect the backend and fetch real data</span>
 
                 </div>
                 <div className="hidden lg:block col-span-1 overflow-hidden border-l border-slate-300">
